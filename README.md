@@ -9,7 +9,7 @@ Official release repository for ToneRelay for Android. This repository contains 
 
 ## Release status
 
-**[Download the 1.0.0-rc7 trial APK](https://github.com/saltfish2333/tonerelay4android-releases/releases/download/v1.0.0-rc7/ToneRelay-1.0.0-rc7.apk)** · [Release notes and checksums](https://github.com/saltfish2333/tonerelay4android-releases/releases/tag/v1.0.0-rc7)
+**[Download the 1.0.0-rc7 trial APK from the website](https://tonerelay.com/downloads/android/1.0.0-rc7/ToneRelay-1.0.0-rc7.apk)** · [GitHub backup download](https://github.com/saltfish2333/tonerelay4android-releases/releases/download/v1.0.0-rc7/ToneRelay-1.0.0-rc7.apk) · [Release notes and checksums](https://github.com/saltfish2333/tonerelay4android-releases/releases/tag/v1.0.0-rc7)
 
 This is a public trial preview. Paid activation is not open yet, and purchasing is disabled in this build. Casting stops when the 168-hour trial expires. Do not purchase a Windows license for the Android app.
 
@@ -18,6 +18,8 @@ Website downloads and GitHub releases provide the same signed APK. The release i
 **公开试用预览：**本版尚未开放正式购买，应用内购买按钮已禁用。首次成功投送有效音频后开始连续 168 小时试用，到期停止投送。请勿购买 Windows 授权用于安卓版。
 
 ToneRelay for Android requires Android 10 or later and a compatible speaker on the same Wi-Fi network. Audio capture depends on the source app allowing Android playback capture.
+
+User testing confirms playback with HomePod, Apple TV and AirPlay-capable Sonos devices. Other compatible AirPlay receivers may also work; support depends on the receiver model, source app and network. This does not include Sonos models without AirPlay support.
 
 ## Planned license
 
