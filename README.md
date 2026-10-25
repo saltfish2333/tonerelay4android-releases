@@ -23,7 +23,9 @@ ToneRelay for Android requires Android 10 or later and a compatible speaker on t
 
 The trial lasts 168 continuous hours from the first successful transmission of valid audio. The first trial registration requires internet access. Restarting the phone does not require an online time check.
 
-The planned price is USD 9.99 once per Android device, with taxes shown at checkout. Permanent activation supports offline use after activation. A code cannot be transferred to another device. The final purchase and refund information will be provided on the website before paid sales open.
+The planned price is USD 9.99 once per Android device, with taxes shown at checkout. Permanent activation supports offline use after activation. A code cannot be transferred to another device. For future Android purchases, a refund can be requested within 14 days of purchase; statutory consumer rights are unaffected. See the [Android refund policy](https://tonerelay.com/android/refund-policy/) for details. Paid sales are not open yet.
+
+未来安卓正式购买可在购买后 14 天内申请退款，法定消费者权利不受影响。详见[安卓退款政策](https://tonerelay.com/zh/android/refund-policy/)；目前尚未开放购买。
 
 ## Install and update
 
