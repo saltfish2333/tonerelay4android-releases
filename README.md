@@ -9,9 +9,9 @@ Official release repository for ToneRelay for Android. This repository contains 
 
 ## Release status
 
-This preview adds quick casting, notification/Quick Settings controls, and automatic reconnect. Three playback profiles are available; Low latency is the default.
+This preview includes quick casting, notification/Quick Settings controls, and automatic reconnect. Three playback profiles are available; Low latency is the default.
 
-**[Download the 1.0.0-rc11 trial APK from the website](https://tonerelay.com/downloads/android/1.0.0-rc11/ToneRelay-1.0.0-rc11.apk)** · [GitHub backup download](https://github.com/saltfish2333/tonerelay4android-releases/releases/download/v1.0.0-rc11/ToneRelay-1.0.0-rc11.apk) · [Release notes and checksums](https://github.com/saltfish2333/tonerelay4android-releases/releases/tag/v1.0.0-rc11)
+**[Download the 1.0.0-rc12 trial APK from the website](https://tonerelay.com/downloads/android/1.0.0-rc12/ToneRelay-1.0.0-rc12.apk)** · [GitHub backup download](https://github.com/saltfish2333/tonerelay4android-releases/releases/download/v1.0.0-rc12/ToneRelay-1.0.0-rc12.apk) · [Release notes and checksums](https://github.com/saltfish2333/tonerelay4android-releases/releases/tag/v1.0.0-rc12)
 
 This is a public trial preview. Paid activation is not open yet, and purchasing is disabled in this build. Casting stops when the 168-hour trial expires. Do not purchase a Windows license for the Android app.
 
