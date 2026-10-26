@@ -1,0 +1,69 @@
+name: Publish verified Android rc12
+"on":
+  push:
+    branches: [main]
+    paths: [.github/workflows/publish-rc12.yml, releases/1.0.0-rc12/**]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: publish-android-rc12
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      GH_REPO: saltfish2333/tonerelay4android-releases
+      TAG: v1.0.0-rc12
+      APK: ToneRelay-1.0.0-rc12.apk
+      APK_SHA256: 1dda072ddb562470077506194da7f5225db91cda93956ea7f905d86064c10f30
+    steps:
+      - name: Download frozen release files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir payload
+          for file in release.json RELEASE_NOTES.md SHA256SUMS.txt; do
+            curl --fail --location --retry 3 --retry-all-errors --max-time 60 --proto '=https' --tlsv1.2 \
+              "https://raw.githubusercontent.com/$GH_REPO/$GITHUB_SHA/releases/1.0.0-rc12/$file" -o "payload/$file"
+          done
+          curl --fail --location --retry 3 --retry-all-errors --max-time 180 --proto '=https' --tlsv1.2 \
+            "https://tonerelay.com/downloads/android/1.0.0-rc12/$APK" -o "payload/$APK"
+      - name: Verify exact approved artifact
+        shell: bash
+        run: |
+          python3 - <<'PYTHON'
+          import hashlib,json,os
+          from pathlib import Path
+          root=Path('payload');m=json.loads((root/'release.json').read_text());apk=root/os.environ['APK']
+          assert hashlib.sha256(apk.read_bytes()).hexdigest()==os.environ['APK_SHA256']==m['sha256']
+          assert apk.stat().st_size==m['sizeBytes']==48837154
+          assert m['versionName']=='1.0.0-rc12' and m['versionCode']==17
+          assert m['fileName']==apk.name and m['purchaseEnabled'] is False
+          assert m['licensingEnvironment']=='production' and m['minSdk']==29
+          assert m['signingCertificateSha256']=='a30f1cdd45ba76f1a01deaf73c69ba29eba968bdb07773b8554daf165dac15c9'
+          assert (root/'SHA256SUMS.txt').read_text().strip()==m['sha256']+'  '+apk.name
+          print('Approved signed APK bytes and release metadata match.')
+          PYTHON
+      - name: Publish preview with temporary repository token
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" --json isDraft,targetCommitish > existing.json 2>/dev/null; then
+            python3 - <<'PYTHON'
+          import json,os
+          r=json.load(open('existing.json'))
+          assert r['isDraft'] and r['targetCommitish']==os.environ['GITHUB_SHA'], 'Existing release requires inspection; refusing to replace it.'
+          PYTHON
+          else
+            gh release create "$TAG" --draft --prerelease --target "$GITHUB_SHA" \
+              --title "ToneRelay for Android 1.0.0-rc12 · Public trial preview" --notes-file payload/RELEASE_NOTES.md
+          fi
+          gh release upload "$TAG" "payload/$APK" payload/RELEASE_NOTES.md payload/SHA256SUMS.txt payload/release.json --clobber
+          gh release edit "$TAG" --draft=false --prerelease --latest=false
+          gh release view "$TAG" --json url,assets
