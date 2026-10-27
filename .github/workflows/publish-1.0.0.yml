@@ -1,0 +1,85 @@
+name: Publish verified Android 1.0.0
+"on":
+  push:
+    branches: [main]
+    paths: [.github/workflows/publish-1.0.0.yml, releases/1.0.0/**]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: publish-android-1.0.0
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      GH_REPO: saltfish2333/tonerelay4android-releases
+      TAG: v1.0.0
+      APK: ToneRelay-1.0.0.apk
+      APK_SHA256: 7a3404361cfb06385113efa65783e511f885d926c311d82cf579721fd8472d55
+    steps:
+      - name: Download frozen release files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir payload
+          for file in release.json RELEASE_NOTES.md SHA256SUMS.txt; do
+            curl --fail --location --retry 3 --retry-all-errors --max-time 60 --proto '=https' --tlsv1.2 \
+              "https://raw.githubusercontent.com/$GH_REPO/$GITHUB_SHA/releases/1.0.0/$file" -o "payload/$file"
+          done
+          curl --fail --location --retry 3 --retry-all-errors --max-time 180 --proto '=https' --tlsv1.2 \
+            "https://tonerelay.com/downloads/android/1.0.0/$APK" -o "payload/$APK"
+      - name: Verify exact approved artifact
+        shell: bash
+        run: |
+          python3 - <<'PYTHON'
+          import hashlib,json,os
+          from pathlib import Path
+          root=Path('payload');m=json.loads((root/'release.json').read_text());apk=root/os.environ['APK']
+          assert hashlib.sha256(apk.read_bytes()).hexdigest()==os.environ['APK_SHA256']==m['sha256']
+          assert apk.stat().st_size==m['sizeBytes']==48837150
+          assert m['versionName']=='1.0.0' and m['versionCode']==18
+          assert m['fileName']==apk.name and m['purchaseEnabled'] is True
+          assert m['licensingEnvironment']=='production' and m['minSdk']==29
+          assert m['priceCents']==699 and m['currency']=='USD' and m['channel']=='stable'
+          assert m['api']=='https://android-api.tonerelay.com' and m['trialHours']==168
+          assert m['signingCertificateSha256']=='a30f1cdd45ba76f1a01deaf73c69ba29eba968bdb07773b8554daf165dac15c9'
+          assert (root/'SHA256SUMS.txt').read_text().strip()==m['sha256']+'  '+apk.name
+          print('Approved signed APK bytes and release metadata match.')
+          PYTHON
+      - name: Publish stable release with temporary repository token
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" --json isDraft,targetCommitish > existing.json 2>/dev/null; then
+            python3 - <<'PYTHON'
+          import json,os
+          r=json.load(open('existing.json'))
+          assert r['isDraft'] and r['targetCommitish']==os.environ['GITHUB_SHA'], 'Existing release requires inspection; refusing to replace it.'
+          PYTHON
+          else
+            gh release create "$TAG" --draft --target "$GITHUB_SHA" \
+              --title "ToneRelay for Android 1.0.0" --notes-file payload/RELEASE_NOTES.md
+          fi
+          gh release upload "$TAG" "payload/$APK" payload/RELEASE_NOTES.md payload/SHA256SUMS.txt payload/release.json --clobber
+          gh api "repos/$GH_REPO/releases/tags/$TAG" > uploaded.json
+          python3 - <<'PYTHON'
+          import hashlib,json
+          from pathlib import Path
+          r=json.load(open('uploaded.json'));root=Path('payload')
+          assert r['draft'] and not r['prerelease']
+          names=['ToneRelay-1.0.0.apk','RELEASE_NOTES.md','SHA256SUMS.txt','release.json']
+          assert len(r['assets'])==len(names)
+          for name in names:
+              a=next(a for a in r['assets'] if a['name']==name);data=(root/name).read_bytes()
+              assert a['state']=='uploaded' and a['size']==len(data)
+              assert a['digest']=='sha256:'+hashlib.sha256(data).hexdigest()
+          print('All four uploaded draft assets match the fixed release files.')
+          PYTHON
+          gh release edit "$TAG" --draft=false --prerelease=false --latest=true
+          gh release view "$TAG" --json url,assets
