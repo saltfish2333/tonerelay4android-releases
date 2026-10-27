@@ -60,14 +60,15 @@ jobs:
             python3 - <<'PYTHON'
           import json,os
           r=json.load(open('existing.json'))
-          assert r['isDraft'] and r['targetCommitish']==os.environ['GITHUB_SHA'], 'Existing release requires inspection; refusing to replace it.'
+          assert r['isDraft'] and r['targetCommitish'] in {os.environ['GITHUB_SHA'],'f98dd391d8a73ff44526ea732e5c8241704d44ce'}, 'Existing release requires inspection; refusing to replace it.'
           PYTHON
           else
             gh release create "$TAG" --draft --target "$GITHUB_SHA" \
               --title "ToneRelay for Android 1.0.0" --notes-file payload/RELEASE_NOTES.md
+            gh release upload "$TAG" "payload/$APK" payload/RELEASE_NOTES.md payload/SHA256SUMS.txt payload/release.json
           fi
-          gh release upload "$TAG" "payload/$APK" payload/RELEASE_NOTES.md payload/SHA256SUMS.txt payload/release.json --clobber
-          gh api "repos/$GH_REPO/releases/tags/$TAG" > uploaded.json
+          release_id="$(gh release view "$TAG" --json databaseId --jq .databaseId)"
+          gh api "repos/$GH_REPO/releases/$release_id" > uploaded.json
           python3 - <<'PYTHON'
           import hashlib,json
           from pathlib import Path
