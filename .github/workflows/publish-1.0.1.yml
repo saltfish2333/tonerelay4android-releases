@@ -1,0 +1,103 @@
+name: Publish verified Android 1.0.1
+"on":
+  push:
+    branches: [main]
+    paths: [.github/workflows/publish-1.0.1.yml, releases/1.0.1/**]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: publish-android-1.0.1
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      GH_REPO: saltfish2333/tonerelay4android-releases
+      TAG: v1.0.1
+      APK: ToneRelay-1.0.1.apk
+      APK_STAGE_COMMIT: 725f552d8f175264e83a85cf310f9c8eb70a24ca
+      APK_SHA256: dc5f10104de659d3529c47e0b21509454f18704f6455bbc626faeba19524d69d
+    steps:
+      - name: Download and verify frozen release files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir payload
+          for file in release.json RELEASE_NOTES.md SHA256SUMS.txt; do
+            curl --fail --location --retry 3 --retry-all-errors --max-time 60 --proto '=https' --tlsv1.2 \
+              "https://raw.githubusercontent.com/$GH_REPO/$GITHUB_SHA/releases/1.0.1/$file" -o "payload/$file"
+          done
+          if ! curl --fail --location --max-time 120 --proto '=https' --tlsv1.2 \
+            "https://github.com/$GH_REPO/releases/download/$TAG/$APK" -o "payload/$APK"; then
+            git init --quiet apk-source
+            git -C apk-source fetch --depth=1 "https://github.com/$GH_REPO.git" "$APK_STAGE_COMMIT"
+            [[ "$(git -C apk-source rev-parse FETCH_HEAD)" == "$APK_STAGE_COMMIT" ]]
+            git -C apk-source show "FETCH_HEAD:$APK" > "payload/$APK"
+          fi
+          python3 - <<'PYTHON'
+          import hashlib, json, os
+          from pathlib import Path
+
+          root = Path('payload')
+          metadata = json.loads((root / 'release.json').read_text())
+          apk = root / os.environ['APK']
+          assert hashlib.sha256(apk.read_bytes()).hexdigest() == os.environ['APK_SHA256'] == metadata['sha256']
+          assert apk.stat().st_size == metadata['sizeBytes'] == 49103230
+          assert metadata['versionName'] == '1.0.1' and metadata['versionCode'] == 19
+          assert metadata['fileName'] == apk.name and metadata['channel'] == 'stable'
+          assert metadata['signingCertificateSha256'] == 'a30f1cdd45ba76f1a01deaf73c69ba29eba968bdb07773b8554daf165dac15c9'
+          assert (root / 'SHA256SUMS.txt').read_text().strip() == f"{metadata['sha256']}  {apk.name}"
+          PYTHON
+      - name: Verify and publish the stable GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          release_ids="$(gh api --paginate "repos/$GH_REPO/releases?per_page=100" --jq ".[] | select(.tag_name == \"$TAG\") | .id")"
+          if [[ -z "$release_ids" ]]; then
+            release_id="$(gh api --method POST "repos/$GH_REPO/releases" -f tag_name="$TAG" \
+              -f target_commitish="$GITHUB_SHA" -f name="ToneRelay for Android 1.0.1" \
+              -f body="$(cat payload/RELEASE_NOTES.md)" -F draft=true -F prerelease=false --jq .id)"
+          else
+            [[ "$release_ids" =~ ^[0-9]+$ ]]
+            release_id="$release_ids"
+          fi
+
+          cat > verify_assets.py <<'PYTHON'
+          import hashlib, json, os, sys
+          from pathlib import Path
+
+          release = json.loads(Path('release-state.json').read_text())
+          assert release['tag_name'] == os.environ['TAG'] and not release['prerelease']
+          expected = {os.environ['APK'], 'RELEASE_NOTES.md', 'SHA256SUMS.txt', 'release.json'}
+          received = {asset['name'] for asset in release['assets']}
+          assert received <= expected and len(received) == len(release['assets'])
+          for asset in release['assets']:
+              data = (Path('payload') / asset['name']).read_bytes()
+              assert asset['state'] == 'uploaded' and asset['size'] == len(data)
+              assert asset['digest'] == 'sha256:' + hashlib.sha256(data).hexdigest()
+          missing = expected - received
+          if sys.argv[1] == 'complete' or not release['draft']:
+              assert not missing
+          for name in sorted(missing):
+              print(name)
+          PYTHON
+
+          gh api "repos/$GH_REPO/releases/$release_id" > release-state.json
+          missing="$(python3 verify_assets.py initial)"
+          if [[ -n "$missing" ]]; then
+            while IFS= read -r file; do
+              gh release upload "$TAG" "payload/$file"
+            done <<< "$missing"
+          fi
+          gh api "repos/$GH_REPO/releases/$release_id" > release-state.json
+          python3 verify_assets.py complete
+          if [[ "$(gh api "repos/$GH_REPO/releases/$release_id" --jq .draft)" == true ]]; then
+            gh api --method PATCH "repos/$GH_REPO/releases/$release_id" -F draft=false -F prerelease=false -f make_latest=true --jq .html_url
+          fi
+          [[ "$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name)" == "$TAG" ]]

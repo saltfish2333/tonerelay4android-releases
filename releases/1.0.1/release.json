@@ -1,0 +1,27 @@
+{
+  "versionName": "1.0.1",
+  "versionCode": 19,
+  "channel": "stable",
+  "fileName": "ToneRelay-1.0.1.apk",
+  "sizeBytes": 49103230,
+  "sha256": "dc5f10104de659d3529c47e0b21509454f18704f6455bbc626faeba19524d69d",
+  "signingCertificateSha256": "a30f1cdd45ba76f1a01deaf73c69ba29eba968bdb07773b8554daf165dac15c9",
+  "licensingEnvironment": "production",
+  "api": "https://android-api.tonerelay.com",
+  "purchaseEnabled": true,
+  "priceCents": 699,
+  "currency": "USD",
+  "trialHours": 168,
+  "releaseDate": "2026-11-21",
+  "minAndroidVersion": "10",
+  "minSdk": 29,
+  "targetSdk": 36,
+  "abis": [
+    "arm64-v8a",
+    "armeabi-v7a",
+    "x86",
+    "x86_64"
+  ],
+  "downloadUrl": "https://github.com/saltfish2333/tonerelay4android-releases/releases/download/v1.0.1/ToneRelay-1.0.1.apk",
+  "releaseUrl": "https://github.com/saltfish2333/tonerelay4android-releases/releases/tag/v1.0.1"
+}
